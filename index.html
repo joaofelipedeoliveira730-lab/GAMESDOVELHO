@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Fighter Arena - Bom Velhino Games</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #06040a;
+            color: #fff;
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 450px;
+            border: 6px double #6f42c1;
+            box-shadow: 0 0 35px rgba(111, 66, 193, 0.6), inset 0 0 30px rgba(0,0,0,0.9);
+            background: #000;
+            image-rendering: pixelated;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+        }
+
+        /* Efeito de Tela CRT de Tubo */
+        .crt-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 99;
+            pointer-events: none;
+            opacity: 0.85;
+        }
+
+        /* Telas de Interface sobrepostas ao Canvas */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(10, 6, 18, 0.95);
+            z-index: 10;
+            transition: opacity 0.3s ease;
+            padding: 15px;
+        }
+
+        .hidden {
+            display: none !important;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        h1 {
+            font-size: 24px;
+            color: #ff2a74;
+            text-shadow: 4px 4px 0px #00f0ff, -2px -2px 0px #000;
+            margin-bottom: 25px;
+            text-align: center;
+            letter-spacing: 2px;
+            animation: pulse 1.5s infinite alternate;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); text-shadow: 3px 3px 0px #00f0ff, -1px -1px 0px #000; }
+            100% { transform: scale(1.05); text-shadow: 4px 4px 0px #ff2a74, 4px -4px 0px #00f0ff, -2px -2px 0px #000; }
+        }
+
+        /* Botões Estilo Retro */
+        .menu-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 11px;
+            background: #1a0f30;
+            color: #fff;
+            border: 4px double #ff2a74;
+            padding: 12px 20px;
+            margin: 6px;
+            cursor: pointer;
+            width: 320px;
+            text-align: center;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.1s ease;
+        }
+
+        .menu-btn:hover {
+            background: #ff2a74;
+            color: #000;
+            border-color: #fff;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #00f0ff;
+        }
+
+        .menu-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #000;
+        }
+
+        .btn-danger {
+            border-color: #ff5555;
+        }
+        .btn-danger:hover {
+            background: #ff5555;
+            box-shadow: 6px 6px 0px #ffaa00;
+        }
+
+        /* Tela de Seleção */
+        .char-select-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 650px;
+        }
+
+        .char-card {
+            background: #150d22;
+            border: 4px solid #4a3080;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            border-radius: 4px;
+        }
+
+        .char-card:hover {
+            border-color: #ff2a74;
+            background: #25143b;
+        }
+
+        .char-card.selected-p1 {
+            border-color: #ff2a74;
+            box-shadow: 0 0 15px #ff2a74;
+        }
+        .char-card.selected-p1::after {
+            content: 'P1';
+            position: absolute;
+            top: -10px;
+            left: 6px;
+            background: #ff2a74;
+            color: #000;
+            padding: 2px 4px;
+            font-size: 8px;
+        }
+
+        .char-card.selected-p2 {
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px #00f0ff;
+        }
+        .char-card.selected-p2::after {
+            content: 'P2';
+            position: absolute;
+            top: -10px;
+            right: 6px;
+            background: #00f0ff;
+            color: #000;
+            padding: 2px 4px;
+            font-size: 8px;
+        }
+
+        .char-preview-canvas {
+            width: 60px;
+            height: 60px;
+            margin: 5px auto;
+            background: #25143b;
+            border: 2px solid #4a3080;
+            image-rendering: pixelated;
+        }
+
+        .char-name {
+            font-size: 9px;
+            margin: 5px 0 3px 0;
+            color: #fff;
+        }
+
+        .char-power-desc {
+            font-size: 6px;
+            color: #aaa;
+            line-height: 1.3;
+        }
+
+        .selection-instructions {
+            font-size: 8px;
+            color: #00f0ff;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        /* Lobby Multiplayer */
+        .lobby-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 350px;
+        }
+
+        .retro-input {
+            font-family: 'Press Start 2P', monospace;
+            background: #110822;
+            border: 3px solid #ff2a74;
+            color: #00f0ff;
+            padding: 10px;
+            font-size: 11px;
+            text-align: center;
+            outline: none;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .retro-input:focus {
+            border-color: #00f0ff;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+
+        .status-msg {
+            font-size: 8px;
+            color: #ffff00;
+            text-align: center;
+            line-height: 1.6;
+            margin: 10px 0;
+            max-width: 500px;
+        }
+
+        /* Painel de Controles Rodapé */
+        #controls-footer {
+            margin-top: 15px;
+            width: 800px;
+            background: #150d22;
+            border: 3px double #4a3080;
+            padding: 10px;
+            display: flex;
+            justify-content: space-around;
+            font-size: 8px;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .control-column {
+            flex: 1;
+            padding: 0 10px;
+        }
+
+        .control-title {
+            color: #ff2a74;
+            font-size: 9px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #4a3080;
+            padding-bottom: 3px;
+        }
+
+        /* Controles Virtuais Touch na Tela (Celular) */
+        #touch-controls {
+            display: none;
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 100%;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+
+        .touch-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .touch-btn {
+            width: 54px;
+            height: 54px;
+            background: rgba(44, 15, 80, 0.7);
+            border: 3px solid rgba(255, 42, 116, 0.8);
+            border-radius: 50%;
+            color: white;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+
+        .touch-btn:active {
+            background: rgba(255, 42, 116, 0.8);
+            border-color: white;
+            transform: scale(0.92);
+        }
+
+        /* Adaptação de Responsividade Completa */
+        @media (max-width: 850px) {
+            #game-container {
+                width: 100vw;
+                height: 56.25vw; /* Proporção 16:9 */
+                border: none;
+                box-shadow: none;
+            }
+            #controls-footer {
+                display: none;
+            }
+            #touch-controls {
+                display: flex;
+            }
+            h1 { font-size: 16px; margin-bottom: 12px; }
+            .menu-btn { width: 220px; font-size: 8px; padding: 8px 10px; }
+            .char-select-grid { gap: 8px; }
+            .char-card { padding: 5px; }
+            .char-preview-canvas { width: 40px; height: 40px; }
+            .char-name { font-size: 7px; }
+            .char-power-desc { display: none; }
+            .retro-input { width: 220px; font-size: 8px; padding: 6px; }
+        }
+    </style>
+    <!-- Firebase para Multiplayer Online de Baixo Consumo -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+</head>
+<body>
+
+    <div id="game-container">
+        <div class="crt-overlay"></div>
+
+        <!-- CANVAS PRINCIPAL -->
+        <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+        <!-- INTRODUÇÃO BOM VELHINO GAMES -->
+        <div id="intro-screen" class="screen">
+            <div style="text-align: center;" id="intro-box">
+                <p style="color: #00f0ff; font-size: 14px; text-shadow: 2px 2px #000; letter-spacing: 2px;">BOM VELHINO</p>
+                <p style="color: #ff2a74; font-size: 20px; text-shadow: 2px 2px #000; margin-top: 10px;">G A M E S</p>
+                <p style="color: #888; font-size: 7px; margin-top: 40px;" id="tap-to-skip">CARREGANDO SISTEMA DE CHIPTUNE...</p>
+            </div>
+        </div>
+
+        <!-- TELA DE MENU -->
+        <div id="menu-screen" class="screen hidden">
+            <h1 style="color: #ffaa00; text-shadow: 4px 4px 0px #ff2a74;">RETRO FIGHTERS</h1>
+            <p style="font-size: 7px; color: #888; margin-top: -15px; margin-bottom: 30px;">BOM VELHINO GAMES - MULTIPLAYER SYSTEM</p>
+            <button class="menu-btn" onclick="selectGameMode('solo')">1 JOGADOR vs ROBÔ</button>
+            <button class="menu-btn" onclick="selectGameMode('pvp')">2 JOGADORES (LOCAL)</button>
+            <button class="menu-btn" style="border-color: #00f0ff;" onclick="openMultiplayerMenu()">MODO ONLINE (PORTA/SALA)</button>
+        </div>
+
+        <!-- TELA LOBBY MULTIPLAYER ONLINE (SISTEMA DE PORTA) -->
+        <div id="multiplayer-screen" class="screen hidden">
+            <h1>PORTA ONLINE</h1>
+            <div class="lobby-inputs">
+                <input type="text" id="room-id-input" class="retro-input" placeholder="CÓDIGO DA SALA (EX: 777)" maxlength="8">
+                <button class="menu-btn" onclick="hostOnlineGame()">CRIAR PORTA (HOST)</button>
+                <button class="menu-btn" style="border-color: #00f0ff;" onclick="joinOnlineGame()">ENTRAR NA PORTA (P2)</button>
+                <button class="menu-btn btn-danger" onclick="backToMenu()">VOLTAR</button>
+            </div>
+            <div class="status-msg" id="lobby-status">Pronto para conectar. Insira um código e escolha "Criar" ou "Entrar".</div>
+        </div>
+
+        <!-- TELA DE SELEÇÃO DE PERSONAGEM -->
+        <div id="char-select-screen" class="screen hidden">
+            <h1 id="selection-banner">SELECIONE O JOGADOR 1</h1>
+            
+            <div class="char-select-grid">
+                <!-- Personagem 0: Pyros -->
+                <div class="char-card" id="card-0" onclick="handleCardClick(0)">
+                    <canvas class="char-preview-canvas" id="preview-0" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#ff5555;">PYROS</div>
+                    <div class="char-power-desc">Bola de Fogo de longo alcance e alto dano.</div>
+                </div>
+
+                <!-- Personagem 1: Electro -->
+                <div class="char-card" id="card-1" onclick="handleCardClick(1)">
+                    <canvas class="char-preview-canvas" id="preview-1" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#00f0ff;">ELECTRO</div>
+                    <div class="char-power-desc">Disparo elétrico extremamente veloz.</div>
+                </div>
+
+                <!-- Personagem 2: Glacius -->
+                <div class="char-card" id="card-2" onclick="handleCardClick(2)">
+                    <canvas class="char-preview-canvas" id="preview-2" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#a3e2f7;">GLACIUS</div>
+                    <div class="char-power-desc">Gelo que congela, empurra e causa lentidão.</div>
+                </div>
+
+                <!-- Personagem 3: Shadow -->
+                <div class="char-card" id="card-3" onclick="handleCardClick(3)">
+                    <canvas class="char-preview-canvas" id="preview-3" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#bc00dd;">SHADOW</div>
+                    <div class="char-power-desc">Projétil sombrio rápido e sorrateiro.</div>
+                </div>
+
+                <!-- Personagem 4: Chronos -->
+                <div class="char-card" id="card-4" onclick="handleCardClick(4)">
+                    <canvas class="char-preview-canvas" id="preview-4" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#ffff44;">CHRONOS</div>
+                    <div class="char-power-desc">Esfera temporal que desacelera o adversário.</div>
+                </div>
+
+                <!-- Personagem 5: Toxic -->
+                <div class="char-card" id="card-5" onclick="handleCardClick(5)">
+                    <canvas class="char-preview-canvas" id="preview-5" width="32" height="32"></canvas>
+                    <div class="char-name" style="color:#39ff14;">TOXIC</div>
+                    <div class="char-power-desc">Nuvem ácida que causa dano persistente.</div>
+                </div>
+            </div>
+
+            <div class="selection-instructions" id="selection-instructions">
+                Aperte 'F' no teclado ou clique para confirmar
+            </div>
+            <button class="menu-btn btn-danger" style="width:200px; padding: 8px; margin-top:10px;" onclick="backToMenu()">VOLTAR</button>
+        </div>
+
+        <!-- TELA DE GAME OVER -->
+        <div id="gameover-screen" class="screen hidden">
+            <h2>FIM DE COMBATE</h2>
+            <div id="winner-banner">VENCEDOR: JOGADOR 1</div>
+            <button class="menu-btn" onclick="restartToMenu()">MENU PRINCIPAL</button>
+            <button class="menu-btn" id="rematch-btn" onclick="rematch()">REVANCHE</button>
+        </div>
+
+        <!-- BOTOES DE CONTROLE VIRTUAL TOUCH (Celular/Tablet) -->
+        <div id="touch-controls">
+            <div class="touch-group">
+                <div class="touch-btn" id="btn-touch-left" style="user-select:none;">◀</div>
+                <div class="touch-btn" id="btn-touch-right" style="user-select:none;">▶</div>
+                <div class="touch-btn" id="btn-touch-jump" style="user-select:none;">▲</div>
+            </div>
+            <div class="touch-group">
+                <div class="touch-btn" id="btn-touch-punch" style="background:#ff2a74; user-select:none;">PUNCH</div>
+                <div class="touch-btn" id="btn-touch-special" style="background:#00f0ff; user-select:none;">POWER</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL DE CONTROLES NO RODAPÉ -->
+    <div id="controls-footer">
+        <div class="control-column">
+            <div class="control-title">CONTROLES - JOGADOR 1 (PC)</div>
+            <div>Mover Esquerda / Direita: <strong style="color: #fff;">A / D</strong></div>
+            <div>Pular: <strong style="color: #fff;">W</strong></div>
+            <div>Soco Rápido: <strong style="color: #fff;">F</strong></div>
+            <div>Habilidade Especial: <strong style="color: #fff;">G</strong></div>
+        </div>
+        <div class="control-column">
+            <div class="control-title" id="p2-control-title">CONTROLES - JOGADOR 2 (PC)</div>
+            <div id="p2-ctrl-move">Mover Esquerda / Direita: <strong style="color: #fff;">Setas Esq / Dir</strong></div>
+            <div id="p2-ctrl-jump">Pular: <strong style="color: #fff;">Seta Cima</strong></div>
+            <div id="p2-ctrl-punch">Soco Rápido: <strong style="color: #fff;">L</strong></div>
+            <div id="p2-ctrl-power">Habilidade Especial: <strong style="color: #fff;">K</strong></div>
+        </div>
+    </div>
+
+<script type="module">
+// --- FIREBASE IMPORTS PARA MULTIPLAYER ---
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+// --- CONFIGURAÇÃO E AUTENTICAÇÃO FIREBASE ---
+let db = null;
+let auth = null;
+let user = null;
+let isMultiplayerOnline = false;
+let myOnlineRole = null; // 'P1' ou 'P2'
+let roomId = '';
+let unsubscribeRoom = null;
+
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'retro-fighters-bvg-2026';
+
+// Tentativa de carregar o Firebase do Ambiente
+async function setupFirebase() {
+    try {
+        if (typeof __firebase_config !== 'undefined') {
+            const firebaseConfig = JSON.parse(__firebase_config);
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+
+            const initAuth = async () => {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            };
+            await initAuth();
+            onAuthStateChanged(auth, (usr) => {
+                user = usr;
+                console.log("Autenticado com sucesso:", user?.uid);
+            });
+        }
+    } catch(e) {
+        console.warn("Firebase indisponível ou erro na config local. Modo online desativado temporariamente.", e);
+    }
+}
+setupFirebase();
+
+// --- SINTETIZADOR DE ÁUDIO RETRO (CHIPTUNE) ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, duration, volume = 0.15) {
+    if (audioCtx.state === 'suspended') return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    
+    gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+// Efeitos de som chiptune
+const Sound = {
+    punch: () => playTone(120, 'square', 0.1, 0.25),
+    power: () => playTone(550, 'sawtooth', 0.25, 0.15),
+    hit: () => playTone(80, 'triangle', 0.15, 0.3),
+    jump: () => playTone(300, 'sine', 0.12, 0.2),
+    select: () => playTone(440, 'square', 0.08, 0.12),
+    confirm: () => {
+        playTone(523.25, 'square', 0.1, 0.15);
+        setTimeout(() => playTone(659.25, 'square', 0.15, 0.15), 100);
+    },
+    intro: () => {
+        const notes = [261.63, 329.63, 392.00, 523.25];
+        notes.forEach((freq, idx) => {
+            setTimeout(() => playTone(freq, 'square', 0.3, 0.15), idx * 150);
+        });
+    }
+};
+
+// Ativação do áudio após clique
+function initAudioOnInteraction() {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+window.addEventListener('click', initAudioOnInteraction);
+window.addEventListener('keydown', initAudioOnInteraction);
+window.addEventListener('touchstart', initAudioOnInteraction);
+
+// --- MOTOR GRÁFICO RETRO (Spriting Procedural Avançado) ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+// Estado Global do Jogo
+let gameMode = 'solo'; // 'solo', 'pvp', 'online'
+let currentScreen = 'intro'; // 'intro', 'menu', 'multiplayer', 'select', 'battle', 'gameover'
+let activePlayerSelection = 1;
+let selectedP1 = 0;
+let selectedP2 = 1;
+
+// Personagens ampliados com design próprio exclusivas
+const HEROES_DATA = [
+    {
+        name: "PYROS",
+        colorMain: "#ff3e3e",
+        colorSub: "#ff823e",
+        colorDetail: "#ffaa00",
+        powerColor: "#ffaa00",
+        powerSpeed: 8.5,
+        powerDamage: 15,
+        powerSize: 8,
+        powerCooldown: 50,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   XXXXXX   ",
+            "  XXXXXXXX  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            "  XXXXXXXX  ",
+            "  XXX  XXX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    },
+    {
+        name: "ELECTRO",
+        colorMain: "#00f0ff",
+        colorSub: "#0072ff",
+        colorDetail: "#ffff33",
+        powerColor: "#ffff33",
+        powerSpeed: 14.0,
+        powerDamage: 12,
+        powerSize: 5,
+        powerCooldown: 40,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   X..X..   ",
+            "  X.XXXX.X  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " X.XXXXXX.X ",
+            "  XXXXXXXX  ",
+            "  XX.  .XX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    },
+    {
+        name: "GLACIUS",
+        colorMain: "#a3e2f7",
+        colorSub: "#0096c7",
+        colorDetail: "#ffffff",
+        powerColor: "#00f0ff",
+        powerSpeed: 6.5,
+        powerDamage: 14,
+        powerSize: 9,
+        powerCooldown: 45,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   XXXXXX   ",
+            "  XXXXXXXX  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            "  XXXXXXXX  ",
+            "  XXX  XXX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    },
+    {
+        name: "SHADOW",
+        colorMain: "#7209b7",
+        colorSub: "#3f37c9",
+        colorDetail: "#ff007f",
+        powerColor: "#ff007f",
+        powerSpeed: 10.0,
+        powerDamage: 13,
+        powerSize: 7,
+        powerCooldown: 40,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   XXXXXX   ",
+            "  XXXXXXXX  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            "  XXXXXXXX  ",
+            "  XXX  XXX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    },
+    {
+        name: "CHRONOS",
+        colorMain: "#ffff44",
+        colorSub: "#ccaa00",
+        colorDetail: "#00ffff",
+        powerColor: "#00ffff",
+        powerSpeed: 7.5,
+        powerDamage: 11,
+        powerSize: 8,
+        powerCooldown: 55,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   X.XX.X   ",
+            "  XXXXXX.X  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            "  XXXXXXXX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    },
+    {
+        name: "TOXIC",
+        colorMain: "#39ff14",
+        colorSub: "#0b6623",
+        colorDetail: "#ff00ff",
+        powerColor: "#39ff14",
+        powerSpeed: 7.0,
+        powerDamage: 16,
+        powerSize: 10,
+        powerCooldown: 60,
+        spriteTemplate: [
+            "  ..XXXX..  ",
+            " .XXXXXXXX. ",
+            " .XOXOOXOX. ",
+            " .XXXXXXXX. ",
+            "  .XXXXXX.  ",
+            "   XXXXXX   ",
+            "  XXXXXXXX  ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            " XXXXXXXXXX ",
+            "  XXXXXXXX  ",
+            "  XXX  XXX  ",
+            "  XX    XX  ",
+            "  XX    XX  ",
+            " .X.    .X. "
+        ]
+    }
+];
+
+// --- RENDERIZADOR PIXEL-ART ---
+function drawPixelSprite(ctx, template, x, y, size, flip, colors, pose, animTick) {
+    const rows = template.length;
+    const cols = template[0].length;
+    const pixelSize = size;
+
+    ctx.save();
+    ctx.translate(x, y);
+    if (flip) {
+        ctx.scale(-1, 1);
+        ctx.translate(-cols * pixelSize, 0);
+    }
+
+    let bobby = 0; 
+    let armStretch = 0;
+    let legOffset = 0;
+
+    if (pose === 'idle') {
+        bobby = Math.sin(animTick * 0.15) * 1.5;
+    } else if (pose === 'walk') {
+        bobby = Math.sin(animTick * 0.35) * 2;
+        legOffset = Math.sin(animTick * 0.35) * 3;
+    } else if (pose === 'punch') {
+        armStretch = 9;
+    } else if (pose === 'hit') {
+        bobby = -2;
+        armStretch = -3;
+    }
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const char = template[r][c];
+            if (char === ' ') continue;
+
+            let color = colors.main;
+            if (char === '.') color = colors.sub;
+            if (char === 'O') color = '#ffffff'; // Olhos
+            if (char === 'X' && (r === 2 || r === 3)) color = colors.detail; 
+
+            let drawX = c * pixelSize;
+            let drawY = r * pixelSize;
+
+            if (r < 11) {
+                drawY += bobby;
+            }
+            if ((r >= 6 && r <= 8) && c >= 8) {
+                drawX += armStretch;
+            }
+            if (r >= 11) {
+                if (c < 6) drawX -= legOffset;
+                if (c > 6) drawX += legOffset;
+            }
+
+            ctx.fillStyle = color;
+            ctx.fillRect(Math.floor(drawX), Math.floor(drawY), pixelSize, pixelSize);
+        }
+    }
+    ctx.restore();
+}
+
+// Inicializar Previews de Seleção
+function generatePreviews() {
+    HEROES_DATA.forEach((hero, index) => {
+        const pCanvas = document.getElementById(`preview-${index}`);
+        if (pCanvas) {
+            const pCtx = pCanvas.getContext('2d');
+            pCtx.clearRect(0,0,32,32);
+            drawPixelSprite(pCtx, hero.spriteTemplate, 4, 1, 1.8, false, {
+                main: hero.colorMain,
+                sub: hero.colorSub,
+                detail: hero.colorDetail
+            }, 'idle', 0);
+        }
+    });
+}
+generatePreviews();
+
+// --- SISTEMA DE COMBATE & ENTIDADES ---
+class Fighter {
+    constructor(x, y, isPlayer1, heroIndex) {
+        this.startX = x;
+        this.startY = y;
+        this.isPlayer1 = isPlayer1;
+        this.setHero(heroIndex);
+        this.reset();
+    }
+
+    setHero(heroIndex) {
+        this.heroIndex = heroIndex;
+        this.hero = HEROES_DATA[heroIndex];
+    }
+
+    reset() {
+        this.x = this.startX;
+        this.y = this.startY;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = 48;
+        this.height = 72;
+        this.hp = 100;
+        this.facing = this.isPlayer1 ? 1 : -1;
+        this.grounded = false;
+        this.state = 'idle'; // 'idle', 'walk', 'jump', 'punch', 'power', 'hit', 'dead'
+        this.stateTimer = 0;
+        this.cooldown = 0;
+        this.animTick = Math.random() * 100;
+        this.invencivel = 0;
+    }
+
+    takeDamage(amount, pushForce) {
+        if (this.invencivel > 0 || this.hp <= 0) return;
+        this.hp -= amount;
+        if (this.hp < 0) this.hp = 0;
+        
+        this.state = 'hit';
+        this.stateTimer = 15;
+        this.vx = pushForce * this.facing * -1.2;
+        this.invencivel = 22;
+
+        Sound.hit();
+        createHitParticles(this.x + this.width / 2, this.y + this.height / 2, this.hero.colorMain);
+
+        if (this.hp <= 0) {
+            this.state = 'dead';
+        }
+    }
+
+    punch(opponent) {
+        if (this.state === 'punch' || this.state === 'power' || this.state === 'hit' || this.state === 'dead') return;
+        
+        this.state = 'punch';
+        this.stateTimer = 12;
+        Sound.punch();
+        
+        const punchRange = 60;
+        const punchX = this.facing === 1 ? this.x + this.width : this.x - punchRange;
+        const punchY = this.y + 15;
+
+        if (punchX + punchRange > opponent.x && punchX < opponent.x + opponent.width &&
+            punchY + 30 > opponent.y && punchY < opponent.y + opponent.height) {
+            opponent.takeDamage(10, 8);
+            addScreenshake(7);
+        }
+    }
+
+    useSpecial() {
+        if (this.state === 'punch' || this.state === 'power' || this.state === 'hit' || this.state === 'dead' || this.cooldown > 0) return;
+
+        this.state = 'power';
+        this.stateTimer = 22;
+        this.cooldown = this.hero.powerCooldown;
+        Sound.power();
+
+        const projX = this.facing === 1 ? this.x + this.width + 12 : this.x - 24;
+        const projY = this.y + 25;
+        projectiles.push(new Projectile(
+            projX, 
+            projY, 
+            this.facing * this.hero.powerSpeed, 
+            this.hero.powerColor, 
+            this.hero.powerDamage, 
+            this.isPlayer1,
+            this.hero.powerSize
+        ));
+    }
+
+    update(opponent) {
+        this.animTick++;
+        if (this.cooldown > 0) this.cooldown--;
+        if (this.invencivel > 0) this.invencivel--;
+
+        if (this.stateTimer > 0) {
+            this.stateTimer--;
+            if (this.stateTimer === 0 && this.state !== 'dead') {
+                this.state = 'idle';
+            }
+        }
+
+        if (this.state === 'dead') {
+            this.vy += 0.8;
+            this.y += this.vy;
+            if (this.y >= 320) {
+                this.y = 320;
+                this.vy = 0;
+            }
+            this.vx *= 0.8;
+            this.x += this.vx;
+            return;
+        }
+
+        this.vy += 0.7;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.y >= 320) {
+            this.y = 320;
+            this.vy = 0;
+            this.grounded = true;
+        }
+
+        if (this.grounded && this.state !== 'hit') {
+            this.vx *= 0.72;
+        }
+
+        if (this.x < 30) this.x = 30;
+        if (this.x > 720) this.x = 720;
+
+        if (this.state !== 'hit' && this.state !== 'punch' && this.state !== 'power') {
+            this.facing = (this.x + this.width/2 < opponent.x + opponent.width/2) ? 1 : -1;
+            
+            if (!this.grounded) {
+                this.state = 'jump';
+            } else if (Math.abs(this.vx) > 0.5) {
+                this.state = 'walk';
+            } else {
+                this.state = 'idle';
+            }
+        }
+    }
+
+    draw(ctx) {
+        if (this.invencivel > 0 && Math.floor(this.animTick / 4) % 2 === 0) return;
+
+        let activePose = 'idle';
+        if (this.state === 'walk') activePose = 'walk';
+        if (this.state === 'punch') activePose = 'punch';
+        if (this.state === 'hit') activePose = 'hit';
+        if (this.state === 'jump') activePose = 'idle';
+        
+        if (this.state === 'dead') {
+            ctx.save();
+            ctx.translate(this.x + this.width/2, this.y + this.height/2);
+            ctx.rotate(this.facing * Math.PI / 2);
+            drawPixelSprite(ctx, this.hero.spriteTemplate, -this.width/2, -this.height/2, 4.5, false, {
+                main: '#555555',
+                sub: '#2c2c2c',
+                detail: '#1a1a1a'
+            }, 'hit', this.animTick);
+            ctx.restore();
+            return;
+        }
+
+        drawPixelSprite(
+            ctx, 
+            this.hero.spriteTemplate, 
+            this.x, 
+            this.y, 
+            4.5, 
+            this.facing === -1, 
+            {
+                main: this.hero.colorMain,
+                sub: this.hero.colorSub,
+                detail: this.hero.colorDetail
+            }, 
+            activePose, 
+            this.animTick
+        );
+    }
+}
+
+// --- PROJÉTEIS ---
+class Projectile {
+    constructor(x, y, vx, color, damage, isFromP1, size) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.color = color;
+        this.damage = damage;
+        this.isFromP1 = isFromP1;
+        this.size = size;
+        this.life = 100;
+    }
+
+    update(p1, p2) {
+        this.x += this.vx;
+        this.life--;
+
+        const target = this.isFromP1 ? p2 : p1;
+        
+        if (this.x + this.size > target.x && this.x - this.size < target.x + target.width &&
+            this.y + this.size > target.y && this.y - this.size < target.y + target.height) {
+            target.takeDamage(this.damage, 10);
+            addScreenshake(8);
+            return true; 
+        }
+
+        return this.life <= 0;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(this.x - this.vx*0.2, this.y, this.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// --- PARTÍCULAS ---
+let particles = [];
+function createHitParticles(x, y, color) {
+    for (let i = 0; i < 18; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            vx: (Math.random() - 0.5) * 10,
+            vy: (Math.random() - 0.5) * 10,
+            color: color,
+            life: 25 + Math.random() * 20,
+            size: 2 + Math.random() * 5
+        });
+    }
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.15;
+        p.life--;
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function drawParticles(ctx) {
+    particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
+    });
+}
+
+// --- DESIGN DE CENÁRIO RETRO ---
+function drawBackground(ctx, shakeX, shakeY) {
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    // Céu Pôr do Sol Retro
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 320);
+    skyGrad.addColorStop(0, "#12051d");
+    skyGrad.addColorStop(0.5, "#3d0840");
+    skyGrad.addColorStop(0.8, "#801243");
+    skyGrad.addColorStop(1, "#f35b20");
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, 800, 320);
+
+    // Sol Vaporwave Retro
+    ctx.fillStyle = "#ffe26a";
+    ctx.beginPath();
+    ctx.arc(400, 230, 75, 0, Math.PI, true);
+    ctx.fill();
+
+    // Grade de Luz
+    ctx.fillStyle = "#801243";
+    for (let i = 0; i < 6; i++) {
+        ctx.fillRect(0, 230 + i * 15, 800, 3 - i * 0.5);
+    }
+
+    // Silhueta de Ruínas
+    ctx.fillStyle = "#200424";
+    ctx.beginPath();
+    ctx.moveTo(0, 280);
+    ctx.lineTo(90, 200); ctx.lineTo(160, 240); ctx.lineTo(260, 170);
+    ctx.lineTo(390, 260); ctx.lineTo(500, 190); ctx.lineTo(610, 230);
+    ctx.lineTo(720, 150); ctx.lineTo(800, 280);
+    ctx.closePath();
+    ctx.fill();
+
+    // Colunas de Templo Retro
+    ctx.fillStyle = "#110214";
+    ctx.fillRect(50, 60, 30, 220);
+    ctx.fillRect(40, 50, 50, 12);
+    ctx.fillRect(40, 270, 50, 12);
+
+    ctx.fillRect(720, 60, 30, 220);
+    ctx.fillRect(710, 50, 50, 12);
+    ctx.fillRect(710, 270, 50, 12);
+
+    // Piso de Tijolos da Arena
+    const floorGrad = ctx.createLinearGradient(0, 320, 0, 450);
+    floorGrad.addColorStop(0, "#261333");
+    floorGrad.addColorStop(1, "#07020a");
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, 320, 800, 130);
+
+    ctx.fillStyle = "#110617";
+    ctx.fillRect(0, 320, 800, 6);
+    for (let col = 0; col < 14; col++) {
+        ctx.fillRect(col * 65, 326, 4, 130);
+    }
+
+    ctx.restore();
+}
+
+// --- TREMOR DE TELA ---
+let screenshake = 0;
+function addScreenshake(intensity) {
+    screenshake = intensity;
+}
+
+// --- ENTRADAS DE TECLADO ---
+const keys = {};
+window.addEventListener('keydown', e => {
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+
+    // Atalhos Rápidos na Seleção de Herói
+    if (currentScreen === 'select') {
+        if (activePlayerSelection === 1 && !isMultiplayerOnline) {
+            if (key === 'a') changeSelection(-1);
+            if (key === 'd') changeSelection(1);
+            if (key === 'f') selectHero(selectedP1);
+        } else if (activePlayerSelection === 2 && gameMode === 'pvp') {
+            if (key === 'arrowleft') changeSelection(-1);
+            if (key === 'arrowright') changeSelection(1);
+            if (key === 'l') selectHero(selectedP2);
+        } else if (isMultiplayerOnline) {
+            // Em modo online, o local escolhe seu personagem livremente
+            if (key === 'a' || key === 'arrowleft') changeSelection(-1);
+            if (key === 'd' || key === 'arrowright') changeSelection(1);
+            if (key === 'f' || key === 'l') selectHero(myOnlineRole === 'P1' ? selectedP1 : selectedP2);
+        }
+    }
+});
+
+window.addEventListener('keyup', e => {
+    keys[e.key.toLowerCase()] = false;
+});
+
+// --- ENTRADAS TOUCH (MOBILE) ---
+const touchStates = {
+    left: false,
+    right: false,
+    jump: false,
+    punch: false,
+    special: false
+};
+
+function setupTouchEvents() {
+    const mapTouch = (btnId, stateKey) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        const start = (e) => { e.preventDefault(); touchStates[stateKey] = true; initAudioOnInteraction(); };
+        const end = (e) => { e.preventDefault(); touchStates[stateKey] = false; };
+        btn.addEventListener('touchstart', start);
+        btn.addEventListener('touchend', end);
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('mouseup', end);
+    };
+
+    mapTouch('btn-touch-left', 'left');
+    mapTouch('btn-touch-right', 'right');
+    mapTouch('btn-touch-jump', 'jump');
+    mapTouch('btn-touch-punch', 'punch');
+    mapTouch('btn-touch-special', 'special');
+}
+setupTouchEvents();
+
+// --- LÓGICA DE INTRO E FLUXO ---
+window.onload = function() {
+    // Tocar Intro Nostálgica
+    setTimeout(() => {
+        Sound.intro();
+        const info = document.getElementById('tap-to-skip');
+        if (info) info.innerText = "CLIQUE PARA ENTRAR NO FLIPERAMA";
+    }, 1000);
+
+    const introScreen = document.getElementById('intro-screen');
+    introScreen.addEventListener('click', () => {
+        Sound.confirm();
+        currentScreen = 'menu';
+        introScreen.classList.add('hidden');
+        document.getElementById('menu-screen').classList.remove('hidden');
+    });
+};
+
+let p1 = new Fighter(150, 320, true, 0);
+let p2 = new Fighter(600, 320, false, 1);
+let projectiles = [];
+
+function selectGameMode(mode) {
+    gameMode = mode;
+    isMultiplayerOnline = false;
+    currentScreen = 'select';
+    activePlayerSelection = 1;
+    selectedP1 = 0;
+    selectedP2 = 1;
+
+    document.getElementById('menu-screen').classList.add('hidden');
+    document.getElementById('char-select-screen').classList.remove('hidden');
+    updateSelectionUI();
+}
+
+function backToMenu() {
+    Sound.select();
+    currentScreen = 'menu';
+    document.getElementById('char-select-screen').classList.add('hidden');
+    document.getElementById('multiplayer-screen').classList.add('hidden');
+    document.getElementById('menu-screen').classList.remove('hidden');
+}
+
+// --- PORTAS ONLINE (LOBBY E MULTIPLAYER EM NUVEM) ---
+function openMultiplayerMenu() {
+    if (!db) {
+        alert("Sistema em nuvem não inicializado. Verifique sua conexão ou ambiente de execução.");
+        return;
+    }
+    Sound.select();
+    currentScreen = 'multiplayer';
+    document.getElementById('menu-screen').classList.add('hidden');
+    document.getElementById('multiplayer-screen').classList.remove('hidden');
+    document.getElementById('lobby-status').innerText = "Crie uma sala ou digite o código de uma sala existente para entrar.";
+}
+
+window.openMultiplayerMenu = openMultiplayerMenu;
+window.backToMenu = backToMenu;
+window.selectGameMode = selectGameMode;
+
+async function hostOnlineGame() {
+    const input = document.getElementById('room-id-input').value.trim();
+    if (!input) {
+        document.getElementById('lobby-status').innerText = "Por favor, digite um código de sala!";
+        return;
+    }
+    roomId = input;
+    myOnlineRole = 'P1';
+    isMultiplayerOnline = true;
+    gameMode = 'online';
+    Sound.confirm();
+
+    document.getElementById('lobby-status').innerText = "Criando sala na nuvem...";
+
+    // Caminho Restrito para Dados Públicos Compartilhados (Regra 1)
+    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+    
+    try {
+        await setDoc(roomRef, {
+            state: 'waiting',
+            p1Selected: -1,
+            p2Selected: -1,
+            p1Ready: false,
+            p2Ready: false,
+            p1Pos: { x: 150, y: 320, facing: 1, state: 'idle', hp: 100 },
+            p2Pos: { x: 600, y: 320, facing: -1, state: 'idle', hp: 100 },
+            bullets: [],
+            lastActive: Date.now()
+        });
+
+        document.getElementById('lobby-status').innerText = `PORTA CRIADA: Sala ${roomId}.\nAguardando outro jogador entrar...`;
+        listenRoom(roomRef);
+    } catch(err) {
+        document.getElementById('lobby-status').innerText = "Erro ao criar sala. Verifique sua conexão.";
+        console.error(err);
+    }
+}
+
+async function joinOnlineGame() {
+    const input = document.getElementById('room-id-input').value.trim();
+    if (!input) {
+        document.getElementById('lobby-status').innerText = "Digite o código da sala para entrar!";
+        return;
+    }
+    roomId = input;
+    myOnlineRole = 'P2';
+    isMultiplayerOnline = true;
+    gameMode = 'online';
+    Sound.confirm();
+
+    document.getElementById('lobby-status').innerText = "Conectando à porta...";
+
+    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+    
+    try {
+        const snap = await getDoc(roomRef);
+        if (!snap.exists()) {
+            document.getElementById('lobby-status').innerText = "Sala não encontrada! Crie uma sala primeiro.";
+            return;
+        }
+
+        await updateDoc(roomRef, {
+            state: 'selecting'
+        });
+
+        document.getElementById('lobby-status').innerText = "Conectado com sucesso! Entrando na seleção.";
+        listenRoom(roomRef);
+    } catch(err) {
+        document.getElementById('lobby-status').innerText = "Erro ao conectar.";
+        console.error(err);
+    }
+}
+
+window.hostOnlineGame = hostOnlineGame;
+window.joinOnlineGame = joinOnlineGame;
+
+// Ouvinte de Mudança de Sala em Nuvem de Alto Desempenho
+function listenRoom(roomRef) {
+    if (unsubscribeRoom) unsubscribeRoom();
+
+    unsubscribeRoom = onSnapshot(roomRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        const data = snapshot.data();
+
+        // Gerenciamento de Telas Baseado no Estado do Banco de Dados
+        if (data.state === 'selecting' && currentScreen === 'multiplayer') {
+            currentScreen = 'select';
+            document.getElementById('multiplayer-screen').classList.add('hidden');
+            document.getElementById('char-select-screen').classList.remove('hidden');
+            updateSelectionUI();
+        }
+
+        // Sincronização de Escolha de Personagens
+        if (data.state === 'selecting') {
+            if (data.p1Selected !== -1 && selectedP1 !== data.p1Selected) {
+                selectedP1 = data.p1Selected;
+                updateSelectionUI();
+            }
+            if (data.p2Selected !== -1 && selectedP2 !== data.p2Selected) {
+                selectedP2 = data.p2Selected;
+                updateSelectionUI();
+            }
+
+            if (data.p1Ready && data.p2Ready) {
+                // Iniciar batalha online sincronizada
+                p1.setHero(data.p1Selected);
+                p2.setHero(data.p2Selected);
+                p1.reset();
+                p2.reset();
+                projectiles = [];
+                currentScreen = 'battle';
+                document.getElementById('char-select-screen').classList.add('hidden');
+                
+                // Mudar estado da sala
+                if (myOnlineRole === 'P1') {
+                    updateDoc(roomRef, { state: 'fight' });
+                }
+            }
+        }
+
+        // Sincronização do combate em tempo real super leve (apenas posições e comandos básicos)
+        if (data.state === 'fight' && currentScreen === 'battle') {
+            if (myOnlineRole === 'P1') {
+                // P1 Atualiza P2 Local baseado nos dados da Nuvem
+                p2.x = data.p2Pos.x;
+                p2.y = data.p2Pos.y;
+                p2.facing = data.p2Pos.facing;
+                p2.state = data.p2Pos.state;
+                p2.hp = data.p2Pos.hp;
+                
+                // Dispara projéteis do rival caso tenha disparado na nuvem
+                if (data.p2Shot) {
+                    const hero = HEROES_DATA[data.p2Selected];
+                    projectiles.push(new Projectile(
+                        data.p2Pos.x + (data.p2Pos.facing * 12), 
+                        data.p2Pos.y + 25, 
+                        data.p2Pos.facing * hero.powerSpeed, 
+                        hero.powerColor, 
+                        hero.powerDamage, 
+                        false, 
+                        hero.powerSize
+                    ));
+                    updateDoc(roomRef, { p2Shot: false }); // Limpa o disparo
+                }
+            } else {
+                // P2 Atualiza P1 Local baseado nos dados da Nuvem
+                p1.x = data.p1Pos.x;
+                p1.y = data.p1Pos.y;
+                p1.facing = data.p1Pos.facing;
+                p1.state = data.p1Pos.state;
+                p1.hp = data.p1Pos.hp;
+
+                if (data.p1Shot) {
+                    const hero = HEROES_DATA[data.p1Selected];
+                    projectiles.push(new Projectile(
+                        data.p1Pos.x + (data.p1Pos.facing * 12), 
+                        data.p1Pos.y + 25, 
+                        data.p1Pos.facing * hero.powerSpeed, 
+                        hero.powerColor, 
+                        hero.powerDamage, 
+                        true, 
+                        hero.powerSize
+                    ));
+                    updateDoc(roomRef, { p1Shot: false });
+                }
+            }
+        }
+
+        if (data.state === 'gameover') {
+            currentScreen = 'gameover';
+            document.getElementById('gameover-screen').classList.remove('hidden');
+            const banner = document.getElementById('winner-banner');
+            banner.innerText = data.winner === 'P1' ? "VENCEDOR: JOGADOR 1" : "VENCEDOR: JOGADOR 2";
+        }
+    }, (err) => {
+        console.error("Erro no Listener da Sala:", err);
+    });
+}
+
+// --- CONTROLE DE SELEÇÃO DE HERÓI ---
+function changeSelection(dir) {
+    Sound.select();
+    if (isMultiplayerOnline) {
+        if (myOnlineRole === 'P1') {
+            selectedP1 = (selectedP1 + dir + HEROES_DATA.length) % HEROES_DATA.length;
+        } else {
+            selectedP2 = (selectedP2 + dir + HEROES_DATA.length) % HEROES_DATA.length;
+        }
+    } else {
+        if (activePlayerSelection === 1) {
+            selectedP1 = (selectedP1 + dir + HEROES_DATA.length) % HEROES_DATA.length;
+        } else {
+            selectedP2 = (selectedP2 + dir + HEROES_DATA.length) % HEROES_DATA.length;
+            if (selectedP2 === selectedP1) {
+                selectedP2 = (selectedP2 + dir + HEROES_DATA.length) % HEROES_DATA.length;
+            }
+        }
+    }
+    updateSelectionUI();
+}
+
+function handleCardClick(idx) {
+    Sound.select();
+    if (isMultiplayerOnline) {
+        if (myOnlineRole === 'P1') {
+            selectedP1 = idx;
+        } else {
+            selectedP2 = idx;
+        }
+        selectHero(idx);
+    } else {
+        if (activePlayerSelection === 1) {
+            selectedP1 = idx;
+            selectHero(idx);
+        } else {
+            selectedP2 = idx;
+            selectHero(idx);
+        }
+    }
+    updateSelectionUI();
+}
+
+window.handleCardClick = handleCardClick;
+
+function updateSelectionUI() {
+    for (let i = 0; i < HEROES_DATA.length; i++) {
+        const card = document.getElementById(`card-${i}`);
+        if (!card) continue;
+        card.className = "char-card";
+        if (selectedP1 === i) card.classList.add('selected-p1');
+        if (selectedP2 === i && (gameMode === 'pvp' || isMultiplayerOnline || activePlayerSelection === 2)) {
+            card.classList.add('selected-p2');
+        }
+    }
+
+    const banner = document.getElementById('selection-banner');
+    const instruction = document.getElementById('selection-instructions');
+
+    if (isMultiplayerOnline) {
+        banner.innerText = `SALA ${roomId} - ESCOLHA O SEU JOGADOR`;
+        instruction.innerText = "Aperte 'F' ou toque no card para confirmar a sua escolha.";
+    } else {
+        if (activePlayerSelection === 1) {
+            banner.innerText = "SELECIONE O JOGADOR 1";
+            instruction.innerText = "Aperte 'F' no teclado ou clique para confirmar P1";
+        } else {
+            banner.innerText = "SELECIONE O JOGADOR 2";
+            instruction.innerText = "Aperte 'L' no teclado ou clique para confirmar P2";
+        }
+    }
+}
+
+async function selectHero(idx) {
+    Sound.confirm();
+    if (isMultiplayerOnline) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+        if (myOnlineRole === 'P1') {
+            await updateDoc(roomRef, {
+                p1Selected: idx,
+                p1Ready: true
+            });
+            document.getElementById('selection-instructions').innerText = "Aguardando confirmação do outro jogador...";
+        } else {
+            await updateDoc(roomRef, {
+                p2Selected: idx,
+                p2Ready: true
+            });
+            document.getElementById('selection-instructions').innerText = "Aguardando confirmação do outro jogador...";
+        }
+        return;
+    }
+
+    if (activePlayerSelection === 1) {
+        p1.setHero(idx);
+        if (gameMode === 'solo') {
+            // Escolhe um oponente aleatório diferente para o bot
+            let bIndex = Math.floor(Math.random() * HEROES_DATA.length);
+            while (bIndex === idx) {
+                bIndex = Math.floor(Math.random() * HEROES_DATA.length);
+            }
+            p2.setHero(bIndex);
+            
+            // Inicia Combate
+            currentScreen = 'battle';
+            document.getElementById('char-select-screen').classList.add('hidden');
+            p1.reset();
+            p2.reset();
+            projectiles = [];
+        } else {
+            // PvP Local - Próximo jogador escolhe
+            activePlayerSelection = 2;
+            updateSelectionUI();
+        }
+    } else {
+        p2.setHero(idx);
+        currentScreen = 'battle';
+        document.getElementById('char-select-screen').classList.add('hidden');
+        p1.reset();
+        p2.reset();
+        projectiles = [];
+    }
+}
+
+// --- LÓGICA DE INTELIGÊNCIA ARTIFICIAL (BOT) ---
+function updateAI() {
+    if (p2.state === 'dead' || p1.state === 'dead') return;
+
+    const dist = Math.abs(p2.x - p1.x);
+
+    // Movimentação sutil inteligente
+    if (dist > 180) {
+        // Se aproxima se estiver longe
+        p2.vx = -3.2 * p2.facing;
+    } else if (dist < 60) {
+        // Se afasta um pouco para fugir de socos consecutivos
+        p2.vx = 2.5 * p2.facing;
+    }
+
+    // Ataque Físico
+    if (dist < 70 && Math.random() < 0.15) {
+        p2.punch(p1);
+    }
+
+    // Ataque Especial
+    if (dist > 150 && Math.random() < 0.04 && p2.cooldown === 0) {
+        p2.useSpecial();
+    }
+
+    // Pulo preventivo contra projéteis ativos vindo em direção
+    projectiles.forEach(p => {
+        if (p.isFromP1 && Math.abs(p2.x - p.x) < 130 && p2.grounded && Math.random() < 0.5) {
+            p2.vy = -13.5;
+            p2.grounded = false;
+            Sound.jump();
+        }
+    });
+}
+
+// --- FLUXO DE LOOP DE REPRODUÇÃO (GAME LOOP) ---
+function gameLoop() {
+    ctx.clearRect(0, 0, 800, 450);
+
+    // Efeito Tremor
+    let shakeX = 0, shakeY = 0;
+    if (screenshake > 0) {
+        shakeX = (Math.random() - 0.5) * screenshake;
+        shakeY = (Math.random() - 0.5) * screenshake;
+        screenshake *= 0.9;
+        if (screenshake < 0.5) screenshake = 0;
+    }
+
+    if (currentScreen === 'battle') {
+        // Atualizar inputs locais do jogador
+        handleLocalInputs();
+
+        if (gameMode === 'solo') {
+            updateAI();
+        }
+
+        // Atualizar Entidades
+        p1.update(p2);
+        p2.update(p1);
+
+        // Atualizar Projéteis
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            if (projectiles[i].update(p1, p2)) {
+                projectiles.splice(i, 1);
+            }
+        }
+
+        // Sincronizar dados de combate local com a nuvem (Otimizado)
+        if (isMultiplayerOnline && db) {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+            if (myOnlineRole === 'P1') {
+                updateDoc(roomRef, {
+                    p1Pos: { x: p1.x, y: p1.y, facing: p1.facing, state: p1.state, hp: p1.hp }
+                });
+            } else {
+                updateDoc(roomRef, {
+                    p2Pos: { x: p2.x, y: p2.y, facing: p2.facing, state: p2.state, hp: p2.hp }
+                });
+            }
+        }
+
+        // Atualizar Partículas de Impacto
+        updateParticles();
+
+        // Checar fim de combate
+        checkMatchOver();
+
+        // Desenhar Tudo
+        drawBackground(ctx, shakeX, shakeY);
+        
+        projectiles.forEach(p => p.draw(ctx));
+        p1.draw(ctx);
+        p2.draw(ctx);
+        drawParticles(ctx);
+
+        // Desenhar HUD Clássica de Luta
+        drawHUD(ctx);
+    } else {
+        // Telas estáticas usam fundo simples
+        ctx.fillStyle = "#0c0814";
+        ctx.fillRect(0,0,800,450);
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+
+// --- PROCESSAMENTO DE TECLADO & TOQUE REALTIME ---
+function handleLocalInputs() {
+    if (p1.state === 'dead' || p2.state === 'dead') return;
+
+    // --- CONTROLE JOGADOR 1 (LOCAL / ONLINE HOST) ---
+    if (!isMultiplayerOnline || myOnlineRole === 'P1') {
+        if (keys['a'] || touchStates.left) {
+            p1.vx = -4.5;
+        }
+        if (keys['d'] || touchStates.right) {
+            p1.vx = 4.5;
+        }
+        if ((keys['w'] || touchStates.jump) && p1.grounded) {
+            p1.vy = -14.0;
+            p1.grounded = false;
+            Sound.jump();
+        }
+        if (keys['f'] || touchStates.punch) {
+            p1.punch(p2);
+            keys['f'] = false;
+            touchStates.punch = false;
+        }
+        if (keys['g'] || touchStates.special) {
+            if (p1.cooldown === 0) {
+                p1.useSpecial();
+                if (isMultiplayerOnline) {
+                    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+                    updateDoc(roomRef, { p1Shot: true });
+                }
+            }
+            keys['g'] = false;
+            touchStates.special = false;
+        }
+    }
+
+    // --- CONTROLE JOGADOR 2 (LOCAL OU ONLINE GUEST) ---
+    if (gameMode === 'pvp') {
+        if (keys['arrowleft']) {
+            p2.vx = -4.5;
+        }
+        if (keys['arrowright']) {
+            p2.vx = 4.5;
+        }
+        if (keys['arrowup'] && p2.grounded) {
+            p2.vy = -14.0;
+            p2.grounded = false;
+            Sound.jump();
+        }
+        if (keys['l']) {
+            p2.punch(p1);
+            keys['l'] = false;
+        }
+        if (keys['k']) {
+            p2.useSpecial();
+            keys['k'] = false;
+        }
+    } else if (isMultiplayerOnline && myOnlineRole === 'P2') {
+        if (keys['a'] || touchStates.left) {
+            p2.vx = -4.5;
+        }
+        if (keys['d'] || touchStates.right) {
+            p2.vx = 4.5;
+        }
+        if ((keys['w'] || touchStates.jump) && p2.grounded) {
+            p2.vy = -14.0;
+            p2.grounded = false;
+            Sound.jump();
+        }
+        if (keys['f'] || touchStates.punch) {
+            p2.punch(p1);
+            keys['f'] = false;
+            touchStates.punch = false;
+        }
+        if (keys['g'] || touchStates.special) {
+            if (p2.cooldown === 0) {
+                p2.useSpecial();
+                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+                updateDoc(roomRef, { p2Shot: true });
+            }
+            keys['g'] = false;
+            touchStates.special = false;
+        }
+    }
+}
+
+// --- DESENHO DE INTERFACE (HUD) ---
+function drawHUD(ctx) {
+    // Retângulos de Barra de Vida (HP) de Design Futurista Retro
+    ctx.fillStyle = "#1c0d30";
+    ctx.fillRect(40, 20, 300, 22);
+    ctx.fillRect(460, 20, 300, 22);
+
+    // Vida P1 (Vermelha)
+    ctx.fillStyle = "#ff2a74";
+    ctx.fillRect(40, 20, 300 * (p1.hp / 100), 22);
+
+    // Vida P2 (Azul)
+    ctx.fillStyle = "#00f0ff";
+    ctx.fillRect(760 - (300 * (p2.hp / 100)), 20, 300 * (p2.hp / 100), 22);
+
+    // Bordas de Metal
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(40, 20, 300, 22);
+    ctx.strokeRect(460, 20, 300, 22);
+
+    // Nomes dos Heróis
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "10px 'Press Start 2P'";
+    ctx.textAlign = "left";
+    ctx.fillText(p1.hero.name, 45, 55);
+
+    ctx.textAlign = "right";
+    ctx.fillText(p2.hero.name, 755, 55);
+
+    // Indicador Round / VS
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffaa00";
+    ctx.font = "14px 'Press Start 2P'";
+    ctx.fillText("VS", 400, 36);
+}
+
+// --- VERIFICAÇÃO DE VENCEDOR ---
+async function checkMatchOver() {
+    if (p1.hp <= 0 || p2.hp <= 0) {
+        let winnerName = p1.hp > 0 ? "JOGADOR 1" : "JOGADOR 2";
+        const winnerRole = p1.hp > 0 ? 'P1' : 'P2';
+
+        if (isMultiplayerOnline && db) {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+            await updateDoc(roomRef, {
+                state: 'gameover',
+                winner: winnerRole
+            });
+        } else {
+            currentScreen = 'gameover';
+            document.getElementById('gameover-screen').classList.remove('hidden');
+            document.getElementById('winner-banner').innerText = `VENCEDOR: ${winnerName}`;
+        }
+    }
+}
+
+// --- RECOMEÇAR JOGO & REVANCHE ---
+async function restartToMenu() {
+    Sound.select();
+    currentScreen = 'menu';
+    document.getElementById('gameover-screen').classList.add('hidden');
+    document.getElementById('menu-screen').classList.remove('hidden');
+    
+    if (isMultiplayerOnline && db) {
+        // Reseta sala online se aplicável
+        try {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+            await setDoc(roomRef, { state: 'waiting', p1Ready: false, p2Ready: false });
+        } catch(e) {}
+    }
+}
+
+async function rematch() {
+    Sound.confirm();
+    document.getElementById('gameover-screen').classList.add('hidden');
+    
+    if (isMultiplayerOnline && db) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+        if (myOnlineRole === 'P1') {
+            await updateDoc(roomRef, { state: 'selecting', p1Ready: false, p2Ready: false });
+        }
+    } else {
+        currentScreen = 'battle';
+        p1.reset();
+        p2.reset();
+        projectiles = [];
+    }
+}
+
+window.restartToMenu = restartToMenu;
+window.rematch = rematch;
+</script>
+</body>
+</html>
